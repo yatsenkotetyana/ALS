@@ -23,10 +23,26 @@ library(ggplot2)
 ```{r}
 
 workdir <- getwd() 
-finename <- "PROACT_ALSFRS.csv"
-alsrfs <-  read.csv(file = paste(workdir,finename,sep="/"))
+
+finenameALSFRS <- "PROACT_ALSFRS.csv"
+finenameDeath <- "PROACT_DEATHDATA.csv"
+finenameRiluzole <- "PROACT_RILUZOLE.csv"
+
+
+alsrfs <-  read.csv(file = paste(workdir,finenameALSFRS,sep="/"))
 alsrfs$subject_id <- as.factor(alsrfs$subject_id)
 print(str(alsrfs))
+
+deathdata <-  read.csv(file = paste(workdir,finenameDeath,sep="/"))
+deathdata$subject_id <- as.factor(deathdata$subject_id)
+print(str(deathdata))
+
+riluzole <-  read.csv(file = paste(workdir,finenameRiluzole,sep="/"))
+riluzole$subject_id <- as.factor(riluzole$subject_id)
+print(str(riluzole))
+
+
+
 impotantcolumns1 <- c("subject_id","ALSFRS_Delta","ALSFRS_R_Total")
 impotantcolumns2 <- c("subject_id","ALSFRS_Delta","avg_ALSFRS_R_Total")
 ```
@@ -34,9 +50,29 @@ impotantcolumns2 <- c("subject_id","ALSFRS_Delta","avg_ALSFRS_R_Total")
 ## Data mining
 ```{r}
 
+# it is one person with two death date, i will choose the last
+filter_deathdata <- 
+  deathdata  %>% 
+  unique() %>%
+  group_by(subject_id,Subject_Died) %>%
+  summarise(Death_Days_max = max(Death_Days)) %>%
+  ungroup()
+
+colnames(filter_deathdata)[colnames(filter_deathdata) == "Death_Days_max"] = "Death_Days"
+
+filter_deathdata$Death_weeks <- round( filter_deathdata$Death_Days / 7.0 )
+filter_deathdata$Death_months <- round( filter_deathdata$Death_Days / 30.0 )
+ 
+print(str(filter_deathdata))  
+
+filter_riluzole <- 
+  riluzole  %>% 
+  unique()
+
+
 # select columns "subject_id","ALSFRS_Delta","ALSFRS_R_Total"
 # filter rows with values in columns "ALSFRS_Delta","ALSFRS_R_Total"
-# average value of "ALSFRS_R_Total" in a certanin moment of time
+# average value of "ALSFRS_R_Total" in a certain in moment of time
 # we have several records some time
 
 filter_alsrfs <- 
@@ -47,13 +83,17 @@ filter_alsrfs <-
      group_by(subject_id, ALSFRS_Delta) %>%
      summarise(avg_ALSFRS_R_Total = mean(ALSFRS_R_Total)) %>%
      select(impotantcolumns2) %>%
-     ungroup()
+     ungroup() 
+    
 
 colnames(filter_alsrfs)[colnames(filter_alsrfs) == "avg_ALSFRS_R_Total"] = "ALSFRS_R_Total"
 filter_alsrfs$ALSFRS_R_Total <- round( filter_alsrfs$ALSFRS_R_Total )
 
 print(str(filter_alsrfs))
 
+```
+## Original statistics preparation
+```{r}
 # Calculate simple statistics: number of measurement (visits), day of first visit, last visit
 # time between first and last visit days, weeks, months
 stat_filter_alsrfs <- 
@@ -83,6 +123,18 @@ stat_filter_alsrfs <-
 
 colnames(stat_filter_alsrfs)[colnames(stat_filter_alsrfs) == "ALSFRS_R_Total"] = "last_ALSFRS_R_Total"
 
+print(str(stat_filter_alsrfs))
+
+stat_filter_alsrfs <-
+  stat_filter_alsrfs  %>%
+  left_join(filter_deathdata, by=c("subject_id" = "subject_id"))
+
+print(str(stat_filter_alsrfs))
+
+```
+
+## Degradation, Slope
+```{r}
 # Changing of ALSFRS_R during all time
 stat_filter_alsrfs$degradation <- stat_filter_alsrfs$intial_ALSFRS_R_Total - stat_filter_alsrfs$last_ALSFRS_R_Total
 
