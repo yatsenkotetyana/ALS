@@ -227,7 +227,7 @@ print(str(filter_alsrfs_st))
 print(str(filter_alsrfs_stop))
 ```
 
-## Correlation xtable
+## Correlation 
 
 ```{r}
 
@@ -245,270 +245,90 @@ stat_correlation  <- cor(stat, use = "complete.obs")
 print(stat_correlation)
 
 ```
+## Dead & Riluzole stat
+```{r}
 
-## Histogram: Number of measurement 
+Number_people <- dim( stat_filter_alsrfs)[1]
 
-```{r pressure, echo=FALSE}
+colnames <- c("Metric","Value", "Percentage")
+r1 <- c("All people",dim( stat_filter_alsrfs)[1])
 
-p1 <- ggplot(stat_filter_alsrfs, aes(x = Number_visits)) + 
-  geom_histogram(color="blue", fill="lightblue", binwidth=1) +
-  geom_vline(aes(xintercept=mean(Number_visits)),  color="black", linetype="dashed", linewidth=1)+
-  geom_vline(aes(xintercept=median(Number_visits)),  color="red", linetype="dashed", linewidth=1)
+all <- dim(stat_filter_alsrfs)[1]
+dead <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "Yes"))
+alive <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "No"))
 
+riluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_used_Riluzole == "Yes"))
+noRiluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_used_Riluzole== "No"))
 
-p2 <- ggplot(stat_filter_alsrfs, aes(x = Number_visits)) + 
-  geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
-  geom_density(alpha=.2, fill="#FF6666") 
+deadriluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "Yes" &
+                            stat_filter_alsrfs$Subject_used_Riluzole == "Yes"))
+deadnoRiluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "Yes" &
+                            stat_filter_alsrfs$Subject_used_Riluzole == "No"))
 
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-p4 <- p2 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
+aliveriluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "No" &
+                            stat_filter_alsrfs$Subject_used_Riluzole == "Yes"))
+alivenoRiluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "No" &
+                            stat_filter_alsrfs$Subject_used_Riluzole == "No"))
 
+metrics <- data.frame (
+   Metric = c( "All people", "Dead", "Alive", "Riluzole", "noRiluzole", 
+               "deadriluzole", "deadnoRiluzole", "aliveriluzole", "alivenoRiluzole"),
+   Value = c( all, dead, alive, 
+                   riluzole, noRiluzole, 
+                   deadriluzole, deadnoRiluzole, 
+                   aliveriluzole, alivenoRiluzole  ),
+   Percentage =c(1, round(100.00*dead/all,2), round(100.00*alive/all,2), 
+                   round(100.00*riluzole/all,2), round(100.00*noRiluzole/all,2),
+                   round(100.00*deadriluzole/dead,2), round(100.00*deadnoRiluzole/dead,2), 
+                   round(100.00*aliveriluzole/alive,2), round(100.00*alivenoRiluzole/alive,2) ),
+   basePercetage = c (all, all, all, all, all, dead, dead, alive, alive)
+   )
 
-show(p1)
-show(p2)
-show(p3)
-show(p4)
-
-
-```
-
-## Histogram: Initial ALSFRS_R
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs, aes(x = intial_ALSFRS_R_Total)) + 
-  geom_histogram(color="blue", fill="lightblue", binwidth=1) +
-    geom_vline(aes(xintercept=mean(intial_ALSFRS_R_Total)),  color="black", linetype="dashed", linewidth=1) +
-  geom_vline(aes(xintercept=median(intial_ALSFRS_R_Total)),  color="red", linetype="dashed", linewidth=1)
-
-
-p2<- ggplot(stat_filter_alsrfs, aes(x =intial_ALSFRS_R_Total)) + 
-  geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
-  geom_density(alpha=.2, fill="#FF6666") 
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-p4 <- p2 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-
-show(p1)
-show(p2)
-show(p3)
-show(p4)
-
-```
-## Histogram: last ALSFRS_R
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs, aes(x = last_ALSFRS_R_Total)) + 
-  geom_histogram(color="blue", fill="lightblue", binwidth=1) +
-    geom_vline(aes(xintercept=mean(last_ALSFRS_R_Total)),  color="black", linetype="dashed", linewidth=1) +
-  geom_vline(aes(xintercept=median(last_ALSFRS_R_Total)),  color="red", linetype="dashed", linewidth=1)
-
-
-p2 <- ggplot(stat_filter_alsrfs, aes(x =last_ALSFRS_R_Total)) + 
-  geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
-  geom_density(alpha=.2, fill="#FF6666") 
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-p4 <- p2 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-
-show(p1)
-show(p2)
-show(p3)
-show(p4)
-
-```
-## Histogram: degradation ALSFRS_R
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs, aes(x = degradation)) + 
-  geom_histogram(color="blue", fill="lightblue", binwidth=1) +
-    geom_vline(aes(xintercept=mean(degradation)),  color="black", linetype="dashed", linewidth=1) +
-  geom_vline(aes(xintercept=median(degradation)),  color="red", linetype="dashed", linewidth=1)
-
-
-p2 <- ggplot(stat_filter_alsrfs, aes(x =degradation)) + 
-  geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
-  geom_density(alpha=.2, fill="#FF6666") 
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-p4 <- p2 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-
-show(p1)
-show(p2)
-show(p3)
-show(p4)
-
-```
-
-## Histogram: degradation ALSFRS_R (for more that one measurement) 
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs_op, aes(x = degradation)) + 
-  geom_histogram(color="blue", fill="lightblue", binwidth=1) +
-    geom_vline(aes(xintercept=mean(degradation)),  color="black", linetype="dashed", linewidth=1) +
-  geom_vline(aes(xintercept=median(degradation)),  color="red", linetype="dashed", linewidth=1)
-
-
-p2 <- ggplot(stat_filter_alsrfs_op, aes(x =degradation)) + 
-  geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
-  geom_density(alpha=.2, fill="#FF6666") 
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-p4 <- p2 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-
-show(p1)
-show(p2)
-show(p3)
-show(p4)
-
-```
-
-## Histogram: slope degradation ALSFRS_R (for more that one measurement) 
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs_op, aes(x = slopedegradation)) + 
-  geom_histogram(color="blue", fill="lightblue", binwidth=0.25) +
-    geom_vline(aes(xintercept=mean(slopedegradation)),  color="black", linetype="dashed", linewidth=1) +
-  geom_vline(aes(xintercept=median(slopedegradation)),  color="red", linetype="dashed", linewidth=1)
-
-
-p2 <- ggplot(stat_filter_alsrfs_op, aes(x = slopedegradation)) + 
-  geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=0.25)+
-  geom_density(alpha=.2, fill="#FF6666") 
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-p4 <- p2 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-
-show(p1)
-show(p2)
-show(p3)
-show(p4)
-
-```
-## Number of measurements depends on time interval (months)
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs, aes(x = Number_visits, y = time_interval_months)) +
-  geom_point(size=2,aes(color = Number_visits))
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-show(p1)
-show(p3)
+print(metrics)
 
 
 ```
-## Initial ALFRS_R depends on time interval (months)
-```{r pressure, echo=FALSE}
 
-p1 <- ggplot(stat_filter_alsrfs, aes(x = intial_ALSFRS_R_Total, y = time_interval_months)) +
-  geom_point(size=2,aes(color = intial_ALSFRS_R_Total))
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-show(p1)
-show(p3)
-
-
-```
-## Last ALFRS_R depends on time interval (months)
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs, aes(x = last_ALSFRS_R_Total, y = time_interval_months)) +
-  geom_point(size=2,aes(color = last_ALSFRS_R_Total))
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-show(p1)
-show(p3)
-
-
-```
-## degradatio ALFRS_R depends on time interval (months)
-```{r pressure, echo=FALSE}
-
-p1 <- ggplot(stat_filter_alsrfs_op, aes(x = degradation, y = time_interval_months)) +
-  geom_point(size=2,aes(color = degradation))
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-show(p1)
-show(p3)
-
-
-```
-## scope degradation ALFRS_R depends on time interval (months)
-```{r pressure, echo=FALSE}
-
-ggplot(stat_filter_alsrfs_op, aes(x = slopedegradation, y = time_interval_months)) +
-  geom_point(size=2,aes(color = slopedegradation))
-
-```
-## initial & last  ALFRS_R depends on time interval (months)
+## initial & last  ALFRS_R (Dead)
 ```{r pressure, echo=FALSE}
 
 p1 <- ggplot(stat_filter_alsrfs_op, aes(x = intial_ALSFRS_R_Total, y = last_ALSFRS_R_Total)) +
   geom_point(size=2,aes(color = intial_ALSFRS_R_Total))
 
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
+p3 <- p1 + facet_grid(Subject_Died~., margins = TRUE, scales='free', labeller=label_both)
 
-show(p1)
 show(p3)
-
-
-```
-## ALSFRS_R =48
-```{r pressure, echo=FALSE}
-d1 <- 
-  filter_alsrfs_stop %>%
-  filter(intial_ALSFRS_R_Total==48)
-
-p1 <- ggplot(d1, aes(x = ALSFRS_Delta_weeks, y = ALSFRS_R_Total)) +
-   geom_line(aes(color=subject_id))+
-   geom_point(aes(color=subject_id))
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-show(p1)
-show(p3)
-
-
 ```
 
-## ALSFRS_R =47
+## Histogram: Last ALSFRS_R
+
 ```{r pressure, echo=FALSE}
-d1 <- 
-  filter_alsrfs_stop %>%
-  filter(intial_ALSFRS_R_Total==47)
 
-p1 <- ggplot(d1, aes(x = ALSFRS_Delta_weeks, y = ALSFRS_R_Total)) +
-   geom_line(aes(color=subject_id))+
-   geom_point(aes(color=subject_id))
+st <- 
+  stat_filter_alsrfs %>%
+  group_by(Subject_Died) %>%
+  summarise(mean_last_ALSFRS_R_Total = mean(last_ALSFRS_R_Total), 
+            median_last_ALSFRS_R_Total = median(last_ALSFRS_R_Total),
+            max_last_ALSFRS_R_Total = max(last_ALSFRS_R_Total),
+            min_last_ALSFRS_R_Total = min(last_ALSFRS_R_Total)
+            ) %>%
+  ungroup()
+print(st)
 
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
+p1 <- ggplot(stat_filter_alsrfs, aes(x =  last_ALSFRS_R_Total)) + 
+  geom_histogram(color="blue", fill="lightblue", binwidth=1) 
 
-show(p1)
+
+p2 <- ggplot(stat_filter_alsrfs, aes(x =  last_ALSFRS_R_Total)) + 
+  geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
+  geom_density(alpha=.2, fill="#FF6666") 
+
+p3 <- p1 + facet_grid(Subject_Died~., margins = TRUE, scales='free', labeller=label_both)
+p4 <- p2 + facet_grid(Subject_Died~., margins = TRUE, scales='free', labeller=label_both)
+
+
 show(p3)
+show(p4)
 
-```
-
-
-## ALSFRS_R =46
-```{r pressure, echo=FALSE}
-d1 <- 
-  filter_alsrfs_stop %>%
-  filter(intial_ALSFRS_R_Total==46)
-
-p1 <- ggplot(d1, aes(x = ALSFRS_Delta_weeks, y = ALSFRS_R_Total)) +
-   geom_line(aes(color=subject_id))+
-   geom_point(aes(color=subject_id))
-
-p3 <- p1 + facet_grid(Subject_Died~Subject_used_Riluzole, margins = TRUE, scales='free', labeller=label_both)
-
-show(p1)
-show(p3)
 
 ```
