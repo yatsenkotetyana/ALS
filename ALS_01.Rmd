@@ -157,7 +157,9 @@ stat_filter_alsrfs <-
   stat_filter_alsrfs  %>%
   left_join(filter_deathdata, by=c("subject_id" = "subject_id"))
 
-stat_filter_alsrfs$Subject_Died[is.na(stat_filter_alsrfs$Subject_Died)] <- "No"
+#left_join(filter_deathdata, by=c("subject_id" = "subject_id"))
+
+#stat_filter_alsrfs$Subject_Died[is.na(stat_filter_alsrfs$Subject_Died)] <- "No"
 
 # Add   censored time of death,days (near 275 cases)
 stat_filter_alsrfs$Death_Days[ stat_filter_alsrfs$Subject_Died=="Yes" & 
@@ -170,6 +172,8 @@ stat_filter_alsrfs$Death_weeks <- round( stat_filter_alsrfs$Death_Days / 7.0 )
 stat_filter_alsrfs$Death_months <- round(stat_filter_alsrfs$Death_Days / 30.0 )
 
 print(str(stat_filter_alsrfs))
+
+print(unique(stat_filter_alsrfs$Subject_Died))
 
 ```
 ## Merge riluzole data
