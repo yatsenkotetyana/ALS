@@ -364,49 +364,7 @@ print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_months,
 ```
 
 
-## Merge death 
-```{r}
-stat_filter_alsrfs <-
-  stat_filter_alsrfs  %>%
-  left_join(filter_deathdata, by=c("subject_id" = "subject_id"))
 
-#left_join(filter_deathdata, by=c("subject_id" = "subject_id"))
-
-#stat_filter_alsrfs$Subject_Died[is.na(stat_filter_alsrfs$Subject_Died)] <- "No"
-
-# Add   censored time of death,days (near 275 cases)
-stat_filter_alsrfs$Death_Days[ stat_filter_alsrfs$Subject_Died=="Yes" & 
-                              is.na(stat_filter_alsrfs$Death_Days) ] <- 
-  stat_filter_alsrfs$last_visit[ stat_filter_alsrfs$Subject_Died=="Yes" & 
-                              is.na(stat_filter_alsrfs$Death_Days) ]
-
-# Death time weeks, months
-stat_filter_alsrfs$Death_weeks <- round( stat_filter_alsrfs$Death_Days / 7.0 )
-stat_filter_alsrfs$Death_months <- round(stat_filter_alsrfs$Death_Days / 30.0 )
-
-print(str(stat_filter_alsrfs))
-
-print(unique(stat_filter_alsrfs$Subject_Died))
-
-```
-## Merge riluzole data
-```{r}
-stat_filter_alsrfs <-
-  stat_filter_alsrfs  %>%
-  left_join(filter_riluzole, by=c("subject_id" = "subject_id"))
-
-stat_filter_alsrfs$Subject_used_Riluzole[is.na(stat_filter_alsrfs$Subject_used_Riluzole)] <- "No"
-# Add start time of using Riluzole, for "Not" and "yes" without start time
-stat_filter_alsrfs$Riluzole_use_Delta[is.na(stat_filter_alsrfs$Riluzole_use_Delta)] <- 0
-
-stat_filter_alsrfs$Riluzole_use_Delta_weeks <- 
-  round( stat_filter_alsrfs$Riluzole_use_Delta / 7.0 )
-stat_filter_alsrfs$Riluzole_use_Delta_months <- 
-  round( stat_filter_alsrfs$Riluzole_use_Delta / 30.0 )
-
-print(str(stat_filter_alsrfs))
-
-```
 ## Degradation, Slope
 ```{r}
 # Changing of ALSFRS_R during all time
