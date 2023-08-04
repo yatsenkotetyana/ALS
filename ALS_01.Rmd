@@ -49,10 +49,10 @@ riluzole <-  read.csv(file = paste(workdir,finenameRiluzole,sep="/"))
 riluzole$subject_id <- as.factor(riluzole$subject_id)
 print(str(riluzole))
 
-impotantcolumnsALSFRS1 <- c("subject_id","ALSFRS_Delta","ALSFRS_R_Total")
-impotantcolumnsALSFRS2 <- c("subject_id","ALSFRS_Delta","avg_ALSFRS_R_Total")
+columnsALSFRS1 <- c("subject_id","ALSFRS_Delta","ALSFRS_R_Total")
+columnsALSFRS2 <- c("subject_id","ALSFRS_Delta","avg_ALSFRS_R_Total")
 
-impotantcolumnsALSFRSHistory <- c("subject_id",	"Subject_ALS_History_Delta", "Onset_Delta", "Diagnosis_Delta")
+columnsALSFRSHistory <- c("subject_id",	"Subject_ALS_History_Delta", "Onset_Delta", "Diagnosis_Delta")
 ```
 
 ## Death Data
@@ -60,29 +60,29 @@ impotantcolumnsALSFRSHistory <- c("subject_id",	"Subject_ALS_History_Delta", "On
 
 # subject_id is not unique here. 
 # it is one person with two death date, i will choose the last
-filter_deathdata <- 
+f_deathdata <- 
   deathdata  %>% 
   unique() %>%
   group_by(subject_id,Subject_Died) %>%
   summarise(Death_Days_max = max(Death_Days)) %>%
   ungroup()
 
-colnames(filter_deathdata)[colnames(filter_deathdata) == "Death_Days_max"] = "Death_Days"
+colnames(f_deathdata)[colnames(f_deathdata) == "Death_Days_max"] = "Death_Days"
 
 
 
-print(str(filter_deathdata))  
+print(str(f_deathdata))  
 
 ```
 
 ## Riluzole  Data
 ```{r}
 # subject_id is unique here. I have checked
-filter_riluzole <- 
+f_riluzole <- 
   riluzole  %>% 
   unique() 
 
-print(str(filter_riluzole))
+print(str(f_riluzole))
 
 
 ```
@@ -91,86 +91,47 @@ print(str(filter_riluzole))
 ```{r}
 
 # ALSRFRS Historical data
-filter_alsrfsHistory <- 
+f_alsrfsHistory <- 
      alsrfsHistory %>% 
-     select(impotantcolumnsALSFRSHistory) 
+     select(columnsALSFRSHistory) 
 
 # Unique subject_id alsrfsHistory 
-print(length(unique(filter_alsrfsHistory$subject_id)))
+print(length(unique(f_alsrfsHistory$subject_id)))
 # Unique subject_id alsrfsHistory with not empty Onset_Delta
-f1 <- filter(filter_alsrfsHistory,!is.na(Onset_Delta))
+f1 <- filter(f_alsrfsHistory,!is.na(Onset_Delta))
 print(dim(unique(f1)))
 # Unique subject_id alsrfsHistory with not empty Onset_Delta
 #
 f2 <- filter(f1,!is.na(Diagnosis_Delta))
 print(dim(unique(f2)))
 
-filter_alsrfsHistory_OD <- 
-     filter_alsrfsHistory %>% 
+f_alsrfsHistory_OD <- 
+     f_alsrfsHistory %>% 
      filter(!is.na(Onset_Delta)) %>%
      unique() 
 
-filter_alsrfsHistory_OD$Onset_Delta_weeks <- 
-  round( filter_alsrfsHistory_OD$Onset_Delta/ 7.0 )
-filter_alsrfsHistory_OD$Onset_Delta_months <-  
-  round( filter_alsrfsHistory_OD$Onset_Delta/ 30.0 )
+f_alsrfsHistory_OD$Onset_Delta_weeks <- 
+  round( f_alsrfsHistory_OD$Onset_Delta/ 7.0 )
+f_alsrfsHistory_OD$Onset_Delta_months <-  
+  round( f_alsrfsHistory_OD$Onset_Delta/ 30.0 )
 
-filter_alsrfsHistory_OD_DD <- 
-     filter_alsrfsHistory_OD %>% 
+f_alsrfsHistory_OD_DD <- 
+     f_alsrfsHistory_OD %>% 
      filter(!is.na(Diagnosis_Delta)) %>%
      unique() 
     
-filter_alsrfsHistory_OD_DD$Diagnosis_Delta_weeks <- 
-  round( filter_alsrfsHistory_OD_DD$Diagnosis_Delta/ 7.0 )
-filter_alsrfsHistory_OD_DD$Diagnosis_Delta_months <-  
-  round(filter_alsrfsHistory_OD_DD$Diagnosis_Delta/ 30.0 )
+f_alsrfsHistory_OD_DD$Diagnosis_Delta_weeks <- 
+  round( f_alsrfsHistory_OD_DD$Diagnosis_Delta/ 7.0 )
+f_alsrfsHistory_OD_DD$Diagnosis_Delta_months <-  
+  round(f_alsrfsHistory_OD_DD$Diagnosis_Delta/ 30.0 )
 
-print(str(filter_alsrfsHistory_OD))
-print(str(filter_alsrfsHistory_OD_DD))
+print(str(f_alsrfsHistory_OD))
+print(str(f_alsrfsHistory_OD_DD))
 
 
 
 ```
-## Original ALSRFS History
-```{r}
-
-filter_alsrfsHistory_OD_DD$OD_DD_interval_days <- 
-  filter_alsrfsHistory_OD_DD$Diagnosis_Delta - 
-  filter_alsrfsHistory_OD_DD$Onset_Delta
-
-filter_alsrfsHistory_OD_DD$OD_DD_interval_weeks <- 
-  round( filter_alsrfsHistory_OD_DD$OD_DD_interval_days/ 7.0 )
-filter_alsrfsHistory_OD_DD$OD_DD_interval_months <-  
-  round( filter_alsrfsHistory_OD_DD$OD_DD_interval_days/ 30.0 )
-
-print(str(filter_alsrfsHistory_OD_DD))
-
-summary(filter_alsrfsHistory_OD_DD$OD_DD_interval_months)  
-
-filter_alsrfsHistory_OD_DD_DeathInfo <-
-  filter_alsrfsHistory_OD_DD  %>%
-  inner_join(filter_deathdata, by=c("subject_id" = "subject_id"))
-
-print(str(filter_alsrfsHistory_OD_DD_DeathInfo))
-
-print(tapply(filter_alsrfsHistory_OD_DD_DeathInfo$OD_DD_interval_months, 
-       filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
-
-print(summary(filter_alsrfsHistory_OD_DD_DeathInfo$OD_DD_interval_months))
-
-filter_alsrfsHistory_OD_DD_DeathTime <-
-  filter_alsrfsHistory_OD_DD_DeathInfo  %>%
-  filter(!is.na(Death_Days))
-
-filter_alsrfsHistory_OD_DD_DeathTime$Death_weeks <- 
-  round( filter_alsrfsHistory_OD_DD_DeathTime$Death_Days/ 7.0 )
-filter_alsrfsHistory_OD_DD_DeathTime$Death_months <-  
-  round( filter_alsrfsHistory_OD_DD_DeathTime$Death_Days/ 30.0 )
-
-print(str(filter_alsrfsHistory_OD_DD_DeathTime))
-
-print(summary(filter_alsrfsHistory_OD_DD_DeathTime$OD_DD_interval_months))
-
+scale_x_continuous(breaks = seq(xmin, xmax, xstep), lim = c(xmin, xmax))
 ```
 
 ## Histogram: ALSFRS History
@@ -178,11 +139,11 @@ print(summary(filter_alsrfsHistory_OD_DD_DeathTime$OD_DD_interval_months))
 ```{r pressure, echo=FALSE}
 
 
-p1 <- ggplot(filter_alsrfsHistory_OD_DD, aes(x =  OD_DD_interval_months)) + 
+p1 <- ggplot(f_alsrfsHistory_OD_DD, aes(x =  OD_DD_interval_months)) + 
   geom_histogram(color="blue", fill="lightblue", binwidth=1) 
 
 
-p2 <- ggplot(filter_alsrfsHistory_OD_DD, aes(x =  OD_DD_interval_months)) + 
+p2 <- ggplot(f_alsrfsHistory_OD_DD, aes(x =  OD_DD_interval_months)) + 
   geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
   geom_density(alpha=.2, fill="#FF6666") 
 
@@ -196,11 +157,11 @@ show(p2)
 
 ```{r pressure, echo=FALSE}
 
-p1 <- ggplot(filter_alsrfsHistory_OD_DD_DeathInfo, aes(x =  OD_DD_interval_months)) + 
+p1 <- ggplot(f_alsrfsHistory_OD_DD_DeathInfo, aes(x =  OD_DD_interval_months)) + 
   geom_histogram(color="blue", fill="lightblue", binwidth=1) 
 
 
-p2 <- ggplot(filter_alsrfsHistory_OD_DD_DeathInfo, aes(x =  OD_DD_interval_months)) + 
+p2 <- ggplot(f_alsrfsHistory_OD_DD_DeathInfo, aes(x =  OD_DD_interval_months)) + 
   geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
   geom_density(alpha=.2, fill="#FF6666") 
 
@@ -222,9 +183,9 @@ show(p4)
 # we have several records some time
 
 
-filter_alsrfs <- 
+f_alsrfs <- 
      alsrfs %>% 
-     select(impotantcolumnsALSFRS1) %>% 
+     select(columnsALSFRS1) %>% 
      filter(!is.na(ALSFRS_R_Total)) %>%
      filter(!is.na(ALSFRS_Delta))  %>%
      group_by(subject_id, ALSFRS_Delta) %>%
@@ -233,18 +194,18 @@ filter_alsrfs <-
      ungroup() 
     
 
-colnames(filter_alsrfs)[colnames(filter_alsrfs) == "avg_ALSFRS_R_Total"] = "ALSFRS_R_Total"
-filter_alsrfs$ALSFRS_R_Total <- round( filter_alsrfs$ALSFRS_R_Total )
+colnames(f_alsrfs)[colnames(f_alsrfs) == "avg_ALSFRS_R_Total"] = "ALSFRS_R_Total"
+f_alsrfs$ALSFRS_R_Total <- round( f_alsrfs$ALSFRS_R_Total )
 
-print(str(filter_alsrfs))
+print(str(f_alsrfs))
 
 ```
 ## Original statistics preparation
 ```{r}
 # Calculate simple statistics: number of measurement (visits), day of first visit, last visit
 # time between first and last visit days, weeks, months
-stat_filter_alsrfs <- 
-   filter_alsrfs %>%
+sf_alsrfs <- 
+   f_alsrfs %>%
    group_by(subject_id) %>%
    summarise( Number_visits = n(), 
               first_visit = min(ALSFRS_Delta), 
@@ -252,112 +213,108 @@ stat_filter_alsrfs <-
               time_interval_days = 1+max(ALSFRS_Delta) - min(ALSFRS_Delta) ) 
 
 
-stat_filter_alsrfs$first_visit_weeks <- round( stat_filter_alsrfs$first_visit / 7.0 )
-stat_filter_alsrfs$first_visit_months <- round( stat_filter_alsrfs$first_visit / 30.0 )
-
-stat_filter_alsrfs$last_visit_weeks <- round( stat_filter_alsrfs$last_visit / 7.0 )
-stat_filter_alsrfs$last_visit_months <- round( stat_filter_alsrfs$last_visit / 30.0 )
-
-stat_filter_alsrfs$time_interval_weeks <- round( stat_filter_alsrfs$time_interval_days / 7.0 )
-stat_filter_alsrfs$time_interval_months <- round( stat_filter_alsrfs$time_interval_days / 30.0 )
+sf_alsrfs$first_visit_weeks <- round( sf_alsrfs$first_visit / 7.0 )
+sf_alsrfs$first_visit_months <- round( sf_alsrfs$first_visit / 30.0 )
+sf_alsrfs$last_visit_weeks <- round( sf_alsrfs$last_visit / 7.0 )
+sf_alsrfs$last_visit_months <- round( sf_alsrfs$last_visit / 30.0 )
+sf_alsrfs$time_interval_weeks <- round( sf_alsrfs$time_interval_days / 7.0 )
+sf_alsrfs$time_interval_months <- round( sf_alsrfs$time_interval_days / 30.0 )
 
 
 # Add value of ALSFRS_R in the first measurement
-stat_filter_alsrfs <- 
-     stat_filter_alsrfs  %>%
-     inner_join(filter_alsrfs, by=c("subject_id" = "subject_id", "first_visit" =  "ALSFRS_Delta")) %>%
+sf_alsrfs <- 
+     sf_alsrfs  %>%
+     inner_join(f_alsrfs, by=c("subject_id" = "subject_id", "first_visit" =  "ALSFRS_Delta")) %>%
      unique()
    
-colnames(stat_filter_alsrfs)[colnames(stat_filter_alsrfs) == "ALSFRS_R_Total"] = "intial_ALSFRS_R_Total"
+colnames(sf_alsrfs)[colnames(sf_alsrfs) == "ALSFRS_R_Total"] = "intial_ALSFRS_R_Total"
 
 # Add value of ALSFRS_R in the last measurement
-stat_filter_alsrfs <- 
-     stat_filter_alsrfs  %>%
-     inner_join(filter_alsrfs, by=c("subject_id" = "subject_id", "last_visit" =  "ALSFRS_Delta")) %>%
+sf_alsrfs <- 
+     sf_alsrfs  %>%
+     inner_join(f_alsrfs, by=c("subject_id" = "subject_id", "last_visit" =  "ALSFRS_Delta")) %>%
      unique()
 
-colnames(stat_filter_alsrfs)[colnames(stat_filter_alsrfs) == "ALSFRS_R_Total"] = "last_ALSFRS_R_Total"
+colnames(sf_alsrfs)[colnames(sf_alsrfs) == "ALSFRS_R_Total"] = "last_ALSFRS_R_Total"
 
-print(str(stat_filter_alsrfs))
+print(str(sf_alsrfs))
 
 ```
 
 ## Inner Join ALSRFS Dead History
 ```{r}
 
-stat_filter_alsrfsHistory_OD_DD_DeathInfo <-
-  stat_filter_alsrfs  %>%
-  inner_join(filter_alsrfsHistory_OD_DD_DeathInfo, by=c("subject_id" = "subject_id"))
+sfH_alsrfsHistory_ODDDDI <-
+  sf_alsrfs  %>%
+  inner_join(f_alsrfsHistory_OD_DD_DeathInfo, by=c("subject_id" = "subject_id"))
 
-stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_FV_interval_days <- 
-  stat_filter_alsrfsHistory_OD_DD_DeathInfo$Onset_Delta -
-  stat_filter_alsrfsHistory_OD_DD_DeathInfo$first_visit
+sfH_alsrfsHistory_ODDDDI$OD_FV_interval_days <- 
+  sfH_alsrfsHistory_ODDDDI$Onset_Delta - sfH_alsrfsHistory_ODDDDI$first_visit
 
-stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_days <- 
-  stat_filter_alsrfsHistory_OD_DD_DeathInfo$Diagnosis_Delta -
-  stat_filter_alsrfsHistory_OD_DD_DeathInfo$first_visit
+sfH_alsrfsHistory_ODDDDI$DD_FV_interval_days <- 
+  sfH_alsrfsHistory_ODDDDI$Diagnosis_Delta - sf_alsrfsHistory_ODDDDI$first_visit
 
-stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_FV_interval_weeks <-
-  round(stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_FV_interval_days /7.0)
-stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_FV_interval_months <-
-  round(stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_FV_interval_days/30.0)
+sf_alsrfsHistory_ODDDDI$OD_FV_interval_weeks <-
+  round(sf_alsrfsHistory_ODDDDI$OD_FV_interval_days /7.0)
+sf_alsrfsHistory_ODDDDI$OD_FV_interval_months <-
+  round(sf_alsrfsHistory_ODDDDI$OD_FV_interval_days/30.0)
 
-stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_weeks <-
-  round(stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_days /7.0)
-stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_months <-
-  round(stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_days/30.0)
+sf_alsrfsHistory_ODDDDI$DD_FV_interval_weeks <-
+  round(sf_alsrfsHistory_ODDDDI$DD_FV_interval_days /7.0)
+sf_alsrfsHistory_ODDDDI$DD_FV_interval_months <-
+  round(sf_alsrfsHistory_ODDDDI$DD_FV_interval_days/30.0)
 
 #########
-print(str(stat_filter_alsrfsHistory_OD_DD_DeathInfo))
+print(str(sf_alsrfsHistory_ODDDDI))
 
 ######
-stat_filter_alsrfsHistory_OD_DD_DeathTime <-
-  stat_filter_alsrfs  %>%
-  inner_join(filter_alsrfsHistory_OD_DD_DeathTime, by=c("subject_id" = "subject_id"))
+sf_alsrfsHistory_ODDDDT <-
+  sf_alsrfs  %>%
+  inner_join(f_alsrfsHistory_OD_DD_DeathTime, by=c("subject_id" = "subject_id"))
 
-print(str(stat_filter_alsrfsHistory_OD_DD_DeathTime))
+print(str(sf_alsrfsHistory_ODDDDT))
 ##
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$intial_ALSFRS_R_Total))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$intial_ALSFRS_R_Total, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$intial_ALSFRS_R_Total))
+print(tapply(sf_alsrfsHistory_ODDDDI$intial_ALSFRS_R_Total, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$last_ALSFRS_R_Total))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$last_ALSFRS_R_Total, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$last_ALSFRS_R_Total))
+print(tapply(sf_alsrfsHistory_ODDDDI$last_ALSFRS_R_Total, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$first_visit_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$first_visit_months, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$first_visit_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$first_visit_months, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$last_visit_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$last_visit_months, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$last_visit_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$last_visit_months, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$time_interval_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$time_interval_months, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$time_interval_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$time_interval_months, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$Onset_Delta_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$Onset_Delta_months, 
-     stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$Onset_Delta_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$Onset_Delta_months, 
+     sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$Diagnosis_Delta_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$Diagnosis_Delta_months, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$Diagnosis_Delta_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$Diagnosis_Delta_months, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_DD_interval_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_DD_interval_months, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$OD_DD_interval_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$OD_DD_interval_months, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_FV_interval_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$OD_FV_interval_months, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$OD_FV_interval_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$OD_FV_interval_months, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
-print(summary(stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_months))
-print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_months, 
-       stat_filter_alsrfsHistory_OD_DD_DeathInfo$Subject_Died, summary))
+print(summary(sf_alsrfsHistory_ODDDDI$DD_FV_interval_months))
+print(tapply(sf_alsrfsHistory_ODDDDI$DD_FV_interval_months, 
+       sf_alsrfsHistory_ODDDDI$Subject_Died, summary))
 
 
 
@@ -366,82 +323,79 @@ print(tapply(stat_filter_alsrfsHistory_OD_DD_DeathInfo$DD_FV_interval_months,
 
 ## Merge death 
 ```{r}
-stat_filter_alsrfs <-
-  stat_filter_alsrfs  %>%
-  left_join(filter_deathdata, by=c("subject_id" = "subject_id"))
+sfd_alsrfs <-
+  sf_alsrfs  %>%
+  left_join(f_deathdata, by=c("subject_id" = "subject_id"))
 
-#left_join(filter_deathdata, by=c("subject_id" = "subject_id"))
+print(str(sf_alsrfs))
+print(str(sfd_alsrfs))
 
-#stat_filter_alsrfs$Subject_Died[is.na(stat_filter_alsrfs$Subject_Died)] <- "No"
-
-# Add   censored time of death,days (near 275 cases)
-stat_filter_alsrfs$Death_Days[ stat_filter_alsrfs$Subject_Died=="Yes" & 
-                              is.na(stat_filter_alsrfs$Death_Days) ] <- 
-  stat_filter_alsrfs$last_visit[ stat_filter_alsrfs$Subject_Died=="Yes" & 
-                              is.na(stat_filter_alsrfs$Death_Days) ]
-
+sfd_alsrfs$Death_Days[ sfd_alsrfs$Subject_Died=="Yes" & 
+                              is.na(sf_alsrfs$Death_Days) ] <- 
+sfd_alsrfs$last_visit[ sfd_alsrfs$Subject_Died=="Yes" & 
+                              is.na(sf_alsrfs$Death_Days)]
 # Death time weeks, months
-stat_filter_alsrfs$Death_weeks <- round( stat_filter_alsrfs$Death_Days / 7.0 )
-stat_filter_alsrfs$Death_months <- round(stat_filter_alsrfs$Death_Days / 30.0 )
+sfd_alsrfs$Death_weeks <- round( sfd_alsrfs$Death_Days / 7.0 )
+sfd_alsrfs$Death_months <- round(sfd_alsrfs$Death_Days / 30.0 )
 
-print(str(stat_filter_alsrfs))
+print(str(sfd_alsrfs))
 
-print(unique(stat_filter_alsrfs$Subject_Died))
+print(unique(sfd_alsrfs$Subject_Died))
 
 ```
 ## Merge riluzole data
 ```{r}
-stat_filter_alsrfs <-
-  stat_filter_alsrfs  %>%
-  left_join(filter_riluzole, by=c("subject_id" = "subject_id"))
+stat_f_alsrfs <-
+  stat_f_alsrfs  %>%
+  left_join(f_riluzole, by=c("subject_id" = "subject_id"))
 
-stat_filter_alsrfs$Subject_used_Riluzole[is.na(stat_filter_alsrfs$Subject_used_Riluzole)] <- "No"
+stat_f_alsrfs$Subject_used_Riluzole[is.na(stat_f_alsrfs$Subject_used_Riluzole)] <- "No"
 # Add start time of using Riluzole, for "Not" and "yes" without start time
-stat_filter_alsrfs$Riluzole_use_Delta[is.na(stat_filter_alsrfs$Riluzole_use_Delta)] <- 0
+stat_f_alsrfs$Riluzole_use_Delta[is.na(stat_f_alsrfs$Riluzole_use_Delta)] <- 0
 
-stat_filter_alsrfs$Riluzole_use_Delta_weeks <- 
-  round( stat_filter_alsrfs$Riluzole_use_Delta / 7.0 )
-stat_filter_alsrfs$Riluzole_use_Delta_months <- 
-  round( stat_filter_alsrfs$Riluzole_use_Delta / 30.0 )
+stat_f_alsrfs$Riluzole_use_Delta_weeks <- 
+  round( stat_f_alsrfs$Riluzole_use_Delta / 7.0 )
+stat_f_alsrfs$Riluzole_use_Delta_months <- 
+  round( stat_f_alsrfs$Riluzole_use_Delta / 30.0 )
 
-print(str(stat_filter_alsrfs))
+print(str(stat_f_alsrfs))
 
 ```
 ## Degradation, Slope
 ```{r}
 # Changing of ALSFRS_R during all time
-stat_filter_alsrfs$degradation <- stat_filter_alsrfs$last_ALSFRS_R_Total - stat_filter_alsrfs$intial_ALSFRS_R_Total
+stat_f_alsrfs$degradation <- stat_f_alsrfs$last_ALSFRS_R_Total - stat_f_alsrfs$intial_ALSFRS_R_Total
 
 #More than one measurement + more than 1 month
-stat_filter_alsrfs_op <- 
-  stat_filter_alsrfs %>%
+stat_f_alsrfs_op <- 
+  stat_f_alsrfs %>%
   filter(Number_visits>1) %>%
   filter(time_interval_months>0)
   
 
 # Slope  of changing of ALSFRS_R during all time
-stat_filter_alsrfs_op$slopedegradation <- 
-  stat_filter_alsrfs_op$degradation / stat_filter_alsrfs_op$time_interval_months
+stat_f_alsrfs_op$slopedegradation <- 
+  stat_f_alsrfs_op$degradation / stat_f_alsrfs_op$time_interval_months
 
 
-filter_alsrfs <- 
-  filter_alsrfs %>%
+f_alsrfs <- 
+  f_alsrfs %>%
   mutate(ALSFRS_Delta_weeks = ALSFRS_Delta / 7.0) 
-filter_alsrfs$ALSFRS_Delta_weeks <- round( filter_alsrfs$ALSFRS_Delta_weeks )
+f_alsrfs$ALSFRS_Delta_weeks <- round( f_alsrfs$ALSFRS_Delta_weeks )
 
-filter_alsrfs_st <-
-  filter_alsrfs %>%
-  inner_join(stat_filter_alsrfs, by=c("subject_id" = "subject_id")) 
+f_alsrfs_st <-
+  f_alsrfs %>%
+  inner_join(stat_f_alsrfs, by=c("subject_id" = "subject_id")) 
 
 
-filter_alsrfs_stop <-
-  filter_alsrfs %>%
-  inner_join(stat_filter_alsrfs_op, by=c("subject_id" = "subject_id")) 
+f_alsrfs_stop <-
+  f_alsrfs %>%
+  inner_join(stat_f_alsrfs_op, by=c("subject_id" = "subject_id")) 
 
-print(str(stat_filter_alsrfs))
-print(str(stat_filter_alsrfs_op))
-print(str(filter_alsrfs_st))
-print(str(filter_alsrfs_stop))
+print(str(stat_f_alsrfs))
+print(str(stat_f_alsrfs_op))
+print(str(f_alsrfs_st))
+print(str(f_alsrfs_stop))
 ```
 
 ## Correlation 
@@ -452,7 +406,7 @@ col <- c("Number_visits","time_interval_months","intial_ALSFRS_R_Total","last_AL
          "degradation","slopedegradation","Death_months", "Riluzole_use_Delta_months")
 
 stat <- 
-  filter_alsrfs_stop %>%
+  f_alsrfs_stop %>%
   select(col)
 
 print(str(stat_correlation))
@@ -465,27 +419,27 @@ print(stat_correlation)
 ## Dead & Riluzole stat
 ```{r}
 
-Number_people <- dim( stat_filter_alsrfs)[1]
+Number_people <- dim( stat_f_alsrfs)[1]
 
 colnames <- c("Metric","Value", "Percentage")
-r1 <- c("All people",dim( stat_filter_alsrfs)[1])
+r1 <- c("All people",dim( stat_f_alsrfs)[1])
 
-all <- dim(stat_filter_alsrfs)[1]
-dead <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "Yes"))
-alive <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "No"))
+all <- dim(stat_f_alsrfs)[1]
+dead <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_Died == "Yes"))
+alive <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_Died == "No"))
 
-riluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_used_Riluzole == "Yes"))
-noRiluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_used_Riluzole== "No"))
+riluzole <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_used_Riluzole == "Yes"))
+noRiluzole <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_used_Riluzole== "No"))
 
-deadriluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "Yes" &
-                            stat_filter_alsrfs$Subject_used_Riluzole == "Yes"))
-deadnoRiluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "Yes" &
-                            stat_filter_alsrfs$Subject_used_Riluzole == "No"))
+deadriluzole <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_Died == "Yes" &
+                            stat_f_alsrfs$Subject_used_Riluzole == "Yes"))
+deadnoRiluzole <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_Died == "Yes" &
+                            stat_f_alsrfs$Subject_used_Riluzole == "No"))
 
-aliveriluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "No" &
-                            stat_filter_alsrfs$Subject_used_Riluzole == "Yes"))
-alivenoRiluzole <- nrow(filter(stat_filter_alsrfs,stat_filter_alsrfs$Subject_Died == "No" &
-                            stat_filter_alsrfs$Subject_used_Riluzole == "No"))
+aliveriluzole <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_Died == "No" &
+                            stat_f_alsrfs$Subject_used_Riluzole == "Yes"))
+alivenoRiluzole <- nrow(filter(stat_f_alsrfs,stat_f_alsrfs$Subject_Died == "No" &
+                            stat_f_alsrfs$Subject_used_Riluzole == "No"))
 
 metrics <- data.frame (
    Metric = c( "All people", "Dead", "Alive", "Riluzole", "noRiluzole", 
@@ -509,7 +463,7 @@ print(metrics)
 ## initial & last  ALFRS_R (Dead)
 ```{r pressure, echo=FALSE}
 
-p1 <- ggplot(stat_filter_alsrfs_op, aes(x = intial_ALSFRS_R_Total, y = last_ALSFRS_R_Total)) +
+p1 <- ggplot(stat_f_alsrfs_op, aes(x = intial_ALSFRS_R_Total, y = last_ALSFRS_R_Total)) +
   geom_point(size=2,aes(color = intial_ALSFRS_R_Total))
 
 p3 <- p1 + facet_grid(Subject_Died~., margins = TRUE, scales='free', labeller=label_both)
@@ -522,7 +476,7 @@ show(p3)
 ```{r pressure, echo=FALSE}
 
 st <- 
-  stat_filter_alsrfs %>%
+  stat_f_alsrfs %>%
   group_by(Subject_Died) %>%
   summarise(mean_last_ALSFRS_R_Total = mean(last_ALSFRS_R_Total), 
             median_last_ALSFRS_R_Total = median(last_ALSFRS_R_Total),
@@ -532,11 +486,11 @@ st <-
   ungroup()
 print(st)
 
-p1 <- ggplot(stat_filter_alsrfs, aes(x =  last_ALSFRS_R_Total)) + 
+p1 <- ggplot(stat_f_alsrfs, aes(x =  last_ALSFRS_R_Total)) + 
   geom_histogram(color="blue", fill="lightblue", binwidth=1) 
 
 
-p2 <- ggplot(stat_filter_alsrfs, aes(x =  last_ALSFRS_R_Total)) + 
+p2 <- ggplot(stat_f_alsrfs, aes(x =  last_ALSFRS_R_Total)) + 
   geom_histogram(aes(y=after_stat(density)), color="blue", fill="lightblue", binwidth=1)+
   geom_density(alpha=.2, fill="#FF6666") 
 
