@@ -1,0 +1,393 @@
+---
+title: "ALS_initial_research"
+author: "Alex Svetov & Tetyana Yatsenko"
+date: "2023-09-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+if(!require(knitr)) install.packages("knitr")
+
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!require(dplyr)) install.packages("dplyr")
+if(!require(ggplot2)) install.packages("ggplot2")
+if(!require(xtable)) install.packages("xtable")
+if(!require(devtools)) install.packages("devtools")
+if(!require(rstudioapi)) install.packages("rstudioapi")
+
+library(dplyr)
+library(devtools)
+library(ggplot2)
+library(xtable)
+library(rstudioapi) 
+```
+
+## Read ALSFRS Data, ALSFRS hisrory, death data, riluzote data
+```{r}
+workdir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+setwd(workdir) 
+
+finenameALSFRS <- "PROACT_ALSFRS.csv"
+finenameALSFRSHistory <- "PROACT_ALSHISTORY.csv"
+finenameDeath <- "PROACT_DEATHDATA.csv"
+finenameRiluzole <- "PROACT_RILUZOLE.csv"
+
+alsrfs <-  read.csv(file = paste(workdir,finenameALSFRS,sep="/"))
+alsrfs$subject_id <- as.factor(alsrfs$subject_id)
+print(str(alsrfs))
+
+alsrfsH <-  read.csv(file = paste(workdir,finenameALSFRSHistory,sep="/"))
+alsrfsH$subject_id <- as.factor(alsrfsH$subject_id)
+print(str(alsrfsH))
+
+deathdata <-  read.csv(file = paste(workdir,finenameDeath,sep="/"))
+deathdata$subject_id <- as.factor(deathdata$subject_id)
+print(str(deathdata))
+
+riluzole <-  read.csv(file = paste(workdir,finenameRiluzole,sep="/"))
+riluzole$subject_id <- as.factor(riluzole$subject_id)
+print(str(riluzole))
+
+columnsALSFRS1 <- c("subject_id","ALSFRS_Delta","ALSFRS_R_Total")
+columnsALSFRS2 <- c("subject_id","ALSFRS_Delta","avg_ALSFRS_R_Total")
+columnsALSFRSH <- c("subject_id",	"Subject_ALS_History_Delta", "Onset_Delta", "Diagnosis_Delta")
+
+```
+
+## Clean death, riluzole data
+```{r}
+## Death Data
+# subject_id is not unique here. 
+# it is one person with two death date, i will choose the last
+f_deathdata <- 
+  deathdata  %>% 
+  unique() %>%
+  group_by(subject_id,Subject_Died) %>%
+  summarise(Death_Days_max = max(Death_Days)) %>%
+  ungroup()
+
+colnames(f_deathdata)[colnames(f_deathdata) == "Death_Days_max"] = "Death_Days"
+print(str(f_deathdata))
+
+## Riluzole  Data
+# subject_id is unique here. I have checked
+f_riluzole <- 
+  riluzole  %>% 
+  unique() 
+
+print(str(f_riluzole))
+
+```
+
+
+
+## Clean, checking and creation features ALSFRS hisrory
+```{r}
+## ALSRFRS Historical  Data
+# ALSRFRS Historical data
+f_alsrfsH <- 
+  alsrfsH %>% 
+  select(all_of(columnsALSFRSH)) 
+
+# Unique subject_id alsrfsHistory 
+print(length(unique(f_alsrfsH$subject_id)))
+
+# Data set with Onset_delta
+f_alsrfsH <- 
+  f_alsrfsH %>% 
+  filter(!is.na(Onset_Delta)) %>%
+  unique() 
+
+f_alsrfsH$Onset_weeks  <- round( f_alsrfsH$Onset_Delta/ 7.0 )
+f_alsrfsH$Onset_months <-round( f_alsrfsH$Onset_Delta/ 30.0 )
+
+print(str(f_alsrfsH))
+
+# Data set with Onset_delta & Diagnosis_Delta
+f_alsrfsH <- 
+  f_alsrfsH %>% 
+  filter(!is.na(Diagnosis_Delta)) %>%
+  unique() 
+
+f_alsrfsH$Diagnosis_weeks <- round( f_alsrfsH$Diagnosis_Delta/ 7.0 )
+f_alsrfsH$Diagnosis_months <- round(f_alsrfsH$Diagnosis_Delta/ 30.0 )
+
+# time difference between diagnosis time and onset time
+f_alsrfsH$OnsetDiag_days <- 
+  f_alsrfsH$Diagnosis_Delta - f_alsrfsH$Onset_Delta
+
+f_alsrfsH$OnsetDiag_weeks <- round( f_alsrfsH$OnsetDiag_days/ 7.0 )
+f_alsrfsH$OnsetDiag_months <- round( f_alsrfsH$OnsetDiag_days/ 30.0 )
+
+print(str(f_alsrfsH))
+
+
+```
+
+
+##  Add Death, riluzole Data ALSRFS History 
+```{r}
+
+#ToDo inner or left join with Death Data
+
+f_alsrfsH <-
+  f_alsrfsH  %>%
+  inner_join(f_deathdata, by=c("subject_id" = "subject_id")) %>%
+  left_join(f_riluzole, by=c("subject_id" = "subject_id"))
+
+f_alsrfsH$Death_weeks <- round( f_alsrfsH$Death_Days/ 7.0 )
+f_alsrfsH$Death_months <- round(f_alsrfsH$Death_Days/ 30.0 )
+
+f_alsrfsH$Riluzole_use_weeks <- round( f_alsrfsH$Riluzole_use_Delta/ 7.0 )
+f_alsrfsH$Riluzole_use_months <- round(f_alsrfsH$Riluzole_use_Delta/ 30.0 )
+
+# difference between death time and onset time
+f_alsrfsH$DeathOnset_days <- f_alsrfsH$Death_Days - f_alsrfsH$Onset_Delta
+f_alsrfsH$DeathOnset_weeks <- round( f_alsrfsH$DeathOnset_days/ 7.0 )
+f_alsrfsH$DeathOnset_months <- round(f_alsrfsH$DeathOnset_days/ 30.0 )
+
+# difference between death time and diagnosis time
+f_alsrfsH$DeathDiag_days <- f_alsrfsH$Death_Days - f_alsrfsH$Diagnosis_Delta
+f_alsrfsH$DeathDiag_weeks <- round( f_alsrfsH$DeathDiag_days/ 7.0 )
+f_alsrfsH$DeathDiag_months <- round(f_alsrfsH$DeathDiag_days/ 30.0 )
+
+# difference between death time and Riluzole use time
+f_alsrfsH$DeathRiluzole_days <- f_alsrfsH$Death_Days - f_alsrfsH$Riluzole_use_Delta
+f_alsrfsH$DeathRiluzole_weeks <- round( f_alsrfsH$DeathRiluzole_days/ 7.0 )
+f_alsrfsH$DeathRiluzole_months <- round(f_alsrfsH$DeathRiluzole_days/ 30.0 )
+
+# difference between Diagnosis time and Riluzole use time
+f_alsrfsH$DiagRiluzole_days <- f_alsrfsH$Diagnosis_Delta - f_alsrfsH$Riluzole_use_Delta
+f_alsrfsH$DiagRiluzole_weeks <- round( f_alsrfsH$DiagRiluzole_days/ 7.0 )
+f_alsrfsH$DiagRiluzole_months <- round(f_alsrfsH$DiagRiluzole_days/ 30.0 )
+
+print(str(f_alsrfsH))
+```
+
+
+##  Cleanig of ALSRFRS  Data
+```{r}
+##  -------------
+## ALSRFRS  Data
+# select columns "subject_id","ALSFRS_Delta","ALSFRS_R_Total"
+# filter rows with values in columns "ALSFRS_Delta","ALSFRS_R_Total"
+# average value of "ALSFRS_R_Total" in a certain in moment of time
+# we have several records some time
+
+
+f_alsrfs <- 
+  alsrfs %>% 
+  select(all_of(columnsALSFRS1)) %>% 
+  filter(!is.na(ALSFRS_R_Total)) %>%
+  filter(!is.na(ALSFRS_Delta))  %>%
+  group_by(subject_id, ALSFRS_Delta) %>%
+  summarise(avg_ALSFRS_R_Total = mean(ALSFRS_R_Total)) %>%
+  select(all_of(columnsALSFRS2)) %>%
+  ungroup() 
+
+
+colnames(f_alsrfs)[colnames(f_alsrfs) == "avg_ALSFRS_R_Total"] = "ALSFRS_R_Total"
+f_alsrfs$ALSFRS_R_Total <- round( f_alsrfs$ALSFRS_R_Total )
+
+print(str(f_alsrfs))
+```
+##  Original statistics preparation for ALSFRS  Data
+```{r}
+## 
+# Calculate simple statistics: number of measurement (visits), day of first visit, last visit
+# time between first and last visit days, weeks, months
+sf_alsrfs <- 
+  f_alsrfs %>%
+  group_by(subject_id) %>%
+  summarise( Number_visits = n(), 
+             first_ALSFRS = min(ALSFRS_Delta), 
+             last_ALSFRS = max(ALSFRS_Delta), 
+             interval_ALSFRS = 1+max(ALSFRS_Delta) - min(ALSFRS_Delta) ) 
+
+# time of first & last ALSFRS
+sf_alsrfs$first_ALSFRS_weeks <- round( sf_alsrfs$first_ALSFRS / 7.0 )
+sf_alsrfs$first_ALSFRS_months <- round( sf_alsrfs$first_ALSFRS / 30.0 )
+sf_alsrfs$last_ALSFRS_weeks <- round( sf_alsrfs$last_ALSFRS / 7.0 )
+sf_alsrfs$last_ALSFRS_months <- round( sf_alsrfs$last_ALSFRS / 30.0 )
+sf_alsrfs$interval_ALSFRS_weeks <- round( sf_alsrfs$interval_ALSFRS / 7.0 )
+sf_alsrfs$interval_ALSFRS_months <- round( sf_alsrfs$interval_ALSFRS / 30.0 )
+# Add value of ALSFRS_R in the first measurement
+sf_alsrfs <- 
+  sf_alsrfs  %>%
+  inner_join(f_alsrfs, by=c("subject_id" = "subject_id", "first_ALSFRS" =  "ALSFRS_Delta")) %>%
+  unique()
+
+# the value of the first ALSFRS
+colnames(sf_alsrfs)[colnames(sf_alsrfs) == "ALSFRS_R_Total"] = "intial_ALSFRS_R_Total"
+
+# Add value of ALSFRS_R in the last measurement
+sf_alsrfs <- 
+  sf_alsrfs  %>%
+  inner_join(f_alsrfs, by=c("subject_id" = "subject_id", "last_ALSFRS" =  "ALSFRS_Delta")) %>%
+  unique()
+
+# the value of the last ALSFRS
+colnames(sf_alsrfs)[colnames(sf_alsrfs) == "ALSFRS_R_Total"] = "last_ALSFRS_R_Total"
+
+print(str(sf_alsrfs))
+```
+##  Intersection ALSRFS History with Onset&Diag Data with Statistic ALSRFS
+```{r}
+## Inner intersection
+## ALSRFS History, Dead info, with table ALSRFS value
+# Necessary condition: more that one ALSFRS_R
+
+sf_alsrfsH <-
+  sf_alsrfs  %>%
+  inner_join(f_alsrfsH, by=c("subject_id" = "subject_id")) %>%
+  filter(Number_visits>1)  
+
+print(dim(sf_alsrfs))
+print(dim(f_alsrfsH))
+print(dim(sf_alsrfsH))
+
+# time difference between time of first ALSFRS and Onset time
+sf_alsrfsH$OnsetFirstALSFRS_days <- sf_alsrfsH$first_ALSFRS - sf_alsrfsH$Onset_Delta
+sf_alsrfsH$OnsetFirstALSFRS_weeks <- round(sf_alsrfsH$OnsetFirstALSFRS_days /7.0)
+sf_alsrfsH$OnsetFirstALSFRS_months <- round(sf_alsrfsH$OnsetFirstALSFRS_days/30.0)
+
+# time difference between time of first ALSFRS and diagnosis time 
+sf_alsrfsH$DiagFirstALSFRS_days <- sf_alsrfsH$first_ALSFRS - sf_alsrfsH$Diagnosis_Delta
+sf_alsrfsH$DiagFirstALSFRS_weeks <- round(sf_alsrfsH$DiagFirstALSFRS_days /7.0)
+sf_alsrfsH$DiagFirstALSFRS_months <- round(sf_alsrfsH$DiagFirstALSFRS_days/30.0)
+
+# time difference between time of death and last ALSFRS time 
+sf_alsrfsH$DeathLastALSFRS_days <- sf_alsrfsH$Death_Days - sf_alsrfsH$last_ALSFRS
+sf_alsrfsH$DeathLastALSFRS_weeks <- round(sf_alsrfsH$DeathLastALSFRS_days /7.0)
+sf_alsrfsH$DeathLastALSFRS_months <- round(sf_alsrfsH$DeathLastALSFRS_days/30.0)
+
+# time difference between time of death and Diagnostics
+sf_alsrfsH$DeathDiag_days <- sf_alsrfsH$Death_Days - sf_alsrfsH$Diagnosis_Delta
+sf_alsrfsH$DeathDiag_weeks <- round(sf_alsrfsH$DeathDiag_days /7.0)
+sf_alsrfsH$DeathDiag_months <- round(sf_alsrfsH$DeathDiag_days/30.0)
+
+# time difference between time of death and Onset
+sf_alsrfsH$DeathOnset_days <- sf_alsrfsH$Death_Days - sf_alsrfsH$Onset_Delta
+sf_alsrfsH$DeathOnset_weeks <- round(sf_alsrfsH$DeathOnset_days /7.0)
+sf_alsrfsH$DeathOnset_months <- round(sf_alsrfsH$DeathOnset_days/30.0)
+
+# time difference between time of last ALSFRS time and Diagnostics
+sf_alsrfsH$LastALSFRSDiag_days <- sf_alsrfsH$last_ALSFRS - sf_alsrfsH$Diagnosis_Delta
+sf_alsrfsH$LastALSFRSDiag_weeks <- round(sf_alsrfsH$LastALSFRSDiag_days /7.0)
+sf_alsrfsH$LastALSFRSDiag_months <- round(sf_alsrfsH$LastALSFRSDiag_days/30.0)
+
+# time difference between time of last ALSFRS time and Onset
+sf_alsrfsH$LastALSFRSOnset_days <- sf_alsrfsH$last_ALSFRS - sf_alsrfsH$Onset_Delta
+sf_alsrfsH$LastALSFRSOnset_weeks <- round(sf_alsrfsH$LastALSFRSOnset_days /7.0)
+sf_alsrfsH$LastALSFRSOnset_months <- round(sf_alsrfsH$LastALSFRSOnset_days/30.0)
+
+print(str(sf_alsrfsH))
+```
+##  Intial ALSFRS_R
+```{r}
+  #Statistics for intial_ALSFRS_R
+  print(dim(sf_alsrfsH))
+  print(summary(sf_alsrfsH$intial_ALSFRS_R_Total))
+  print(tapply(sf_alsrfsH$intial_ALSFRS_R_Total,sf_alsrfsH$Subject_Died, summary))
+ 
+  #Categories of initial ALSRFS-R 
+   sf_alsrfsH <-
+    sf_alsrfsH %>%
+    mutate(type=case_when(
+      .$intial_ALSFRS_R_Total >=41  ~ "41>=",
+      .$intial_ALSFRS_R_Total <41 & .$intial_ALSFRS_R_Total >= 38  ~ "38>=,<41",
+      .$intial_ALSFRS_R_Total < 38 & .$intial_ALSFRS_R_Total >= 34  ~ "34>=,<38",
+      .$intial_ALSFRS_R_Total < 34 ~ "34<")) 
+   
+  # Statistics for types
+  print(dim(sf_alsrfsH))
+  print(summary(sf_alsrfsH$intial_ALSFRS_R_Total))
+  print(tapply(sf_alsrfsH$intial_ALSFRS_R_Total,sf_alsrfsH$type, summary))
+   
+```
+
+## Slope of Degradation
+```{r}
+# Calculate slope of degradation
+
+  sf_alsrfsH<- 
+    sf_alsrfsH %>%
+    filter(interval_ALSFRS_months>0) %>%
+    mutate(diff_ALSFRS=last_ALSFRS_R_Total-intial_ALSFRS_R_Total) %>%
+    mutate(slope_ALSFRS=diff_ALSFRS / interval_ALSFRS_months) 
+
+
+# Statistics for slope
+  print(dim(sf_alsrfsH))
+  print(summary(sf_alsrfsH$slope_ALSFRS))
+  print(tapply(sf_alsrfsH$slope_ALSFRS,sf_alsrfsH$type, summary))
+
+print(dim(sf_alsrfsH))
+```
+##  Diagnosis Time
+```{r}
+ #Statistics for Diagnosis_months 
+ print(dim(sf_alsrfsH))
+ print(summary(sf_alsrfsH$Diagnosis_months))
+ print(tapply(sf_alsrfsH$Diagnosis_months,sf_alsrfsH$Subject_Died, summary))
+ 
+#Categories of Diagnosis months
+ sf_alsrfsH <-
+    sf_alsrfsH %>%
+    mutate(sf_alsrfsH,typeDiagTime=case_when(
+      .$Diagnosis_months >=-2.0  ~ ">=-2.0",
+      .$Diagnosis_months < -2.0 &  .$Diagnosis_months >= -5.0 ~ ">=-5.0,<-2.0",
+      .$Diagnosis_months < -5.0 &  .$Diagnosis_months >= -10.0 ~ ">=-10.0,<-5.0",
+      .$Diagnosis_months < -10.0  ~ "<-10")) 
+ 
+```
+##  Categories information
+```{r}
+  sf_alsrfsH <- 
+    sf_alsrfsH %>% 
+    mutate(DiedYes=case_when(
+      .$Subject_Died =="Yes"  ~ 1,
+      .$Subject_Died =="No"  ~ 0)) %>% 
+    mutate(DiedNo=case_when(
+      .$Subject_Died =="Yes"  ~ 0,
+      .$Subject_Died =="No"  ~ 1))
+
+  type_sf_alsrfsH <-
+    sf_alsrfsH %>%
+    group_by(type) %>% 
+    summarise(typeSize = n(),
+              typeSizeDiedYes=sum(DiedYes),
+              typeSizeDiedNo=sum(DiedNo)
+              ) %>% 
+         ungroup()
+    
+  print(type_sf_alsrfsH)
+```
+
+##  Add patient information information to traectories
+
+```{r}
+
+f_alsrfs$ALSFRS_Delta_weeks <- round(f_alsrfs$ALSFRS_Delta / 7.0 )
+f_alsrfs$ALSFRS_Delta_months <- round(f_alsrfs$ALSFRS_Delta / 30.0 )
+col <- c("subject_id","type","Number_visits","Subject_Died","typeDiagTime")
+
+f_alsrfs <-
+    f_alsrfs  %>%
+    inner_join(select(sf_alsrfsH,all_of(col)), by=c("subject_id" = "subject_id"))
+  
+print(str(f_alsrfs))
+  
+```
+## Traectories of degradations
+```{r pressure, echo=FALSE}
+  tr<- ggplot(f_alsrfs, aes(x = ALSFRS_Delta_months, y = ALSFRS_R_Total,group = subject_id)) +
+    geom_line(aes(color =Subject_Died),size=1)+
+    ylab("ALSFRS_R") +
+    xlab("Time of measurement of ALSFRS_R, Months")+
+    labs(title="Traectories of Degradations")
+  tr + facet_grid(typeDiagTime ~type , margins = TRUE, scales='free', labeller=label_both)
+  
+
+```
